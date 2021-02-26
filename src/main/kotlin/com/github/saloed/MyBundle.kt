@@ -1,4 +1,4 @@
-package com.github.saloed.customdiffplugin
+package com.github.saloed
 
 import com.intellij.AbstractBundle
 import org.jetbrains.annotations.NonNls

@@ -1,19 +1,19 @@
 <idea-plugin>
-    <id>com.github.saloed.customdiffplugin</id>
+    <id>com.github.saloed</id>
     <name>CustomDiffPlugin</name>
-    <vendor>saloed</vendor>
+    <vendor>Valentyn Sobol</vendor>
 
     <!-- Product and plugin compatibility requirements -->
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
-
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.saloed.customdiffplugin.services.MyApplicationService"/>
-        <projectService serviceImplementation="com.github.saloed.customdiffplugin.services.MyProjectService"/>
+        <fileType name="JSON Diff" implementationClass="com.github.saloed.DiffFileType" fieldName="INSTANCE"
+                  extensions="jdiff" language="JSON"/>
     </extensions>
-
-    <applicationListeners>
-        <listener class="com.github.saloed.customdiffplugin.listeners.MyProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
+    <actions>
+        <action id="com.github.saloed.CustomDiffAction" class="com.github.saloed.CustomDiffAction"
+                text="View Custom Diff" description="Show diff in custom format">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

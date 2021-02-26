@@ -41,7 +41,7 @@ repositories {
 }
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.15.0")
-    implementation("com.github.saloed:custom-diff:0.0.2")
+    implementation("com.github.saloed:custom-diff:0.0.4")
 }
 
 // Configure gradle-intellij-plugin plugin.
