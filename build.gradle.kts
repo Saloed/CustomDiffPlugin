@@ -2,8 +2,12 @@ import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.changelog.closure
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.util.Properties
+
 
 fun properties(key: String) = project.findProperty(key).toString()
+
+val githubProperties = Properties().apply { load(rootProject.file("github.properties").inputStream()) }
 
 plugins {
     // Java support
@@ -27,9 +31,17 @@ version = properties("projectVersion")
 repositories {
     mavenCentral()
     jcenter()
+    maven {
+        url = uri("https://maven.pkg.github.com/saloed/custom-diff")
+        credentials {
+            username = githubProperties.getProperty("gpr.user")
+            password = githubProperties.getProperty("gpr.key")
+        }
+    }
 }
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.15.0")
+    implementation("com.github.saloed:custom-diff:0.0.2")
 }
 
 // Configure gradle-intellij-plugin plugin.
