@@ -3,7 +3,6 @@
 # CustomDiffPlugin Changelog
 
 ## Unreleased
-
 ## 0.0.2
 ### Fix
 - ignore whitespace support
