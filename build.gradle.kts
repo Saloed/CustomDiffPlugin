@@ -4,7 +4,6 @@ import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Properties
 
-
 fun properties(key: String) = project.findProperty(key).toString()
 
 val githubProperties = Properties().apply { load(rootProject.file("github.properties").inputStream()) }
