@@ -65,8 +65,8 @@ jobs:
       # Run detekt, ktlint and tests
       - name: Run Linters and Test
         env:
-          gpr.user: ${{ github.actor }}
-          gpr.key: ${{ secrets.GITHUB_TOKEN }}
+          gpr_user: ${{ github.actor }}
+          gpr_key: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew check
 
       # Run verifyPlugin Gradle task

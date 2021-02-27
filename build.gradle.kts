@@ -9,7 +9,7 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 val githubProperties = Properties().apply { load(rootProject.file("github.properties").inputStream()) }
 fun String.nullIfBlank() = if (isNotBlank()) this else null
-fun githubProperty(key: String) = githubProperties.getProperty(key)?.nullIfBlank() ?: System.getenv(key)
+fun githubProperty(key: String) = githubProperties.getProperty(key)?.nullIfBlank() ?: System.getenv(key.replace(".", "_"))
 
 plugins {
     // Java support
