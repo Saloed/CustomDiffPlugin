@@ -76,7 +76,6 @@ class CustomDiffViewer(context: DiffContext, request: DiffRequest) : SimpleDiffV
     private val fragmentsPolicy: InnerFragmentsPolicy
         get() = (myTextDiffProvider as TextDiffProviderBase).highlightPolicy.fragmentsPolicy
 
-
     data class MyChange(val isEqual: Boolean, val left: Int, val right: Int) {
         fun add(change: MyChange) = MyChange(isEqual, left + change.left, right + change.right)
     }
@@ -125,4 +124,3 @@ class CustomDiffViewer(context: DiffContext, request: DiffRequest) : SimpleDiffV
         return true
     }
 }
-

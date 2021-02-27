@@ -21,7 +21,7 @@ class CustomDiffRequestChain(val file: VirtualFile) : DiffRequestChainBase() {
             override fun process(context: UserDataHolder, indicator: ProgressIndicator): DiffRequest {
                 val diff = try {
                     TwoWayDiff.loadFromJson(file.inputStream.bufferedReader(file.charset).readText())
-                } catch (e: Exception) {
+                } catch (e: IllegalArgumentException) {
                     val message = MyBundle.message("diffLoadError", file.name)
                     throw DiffRequestProducerException(message, e)
                 }
@@ -29,5 +29,4 @@ class CustomDiffRequestChain(val file: VirtualFile) : DiffRequestChainBase() {
             }
         })
     }
-
 }

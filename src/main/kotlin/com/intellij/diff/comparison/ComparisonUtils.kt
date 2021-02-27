@@ -108,7 +108,6 @@ object ComparisonUtils {
         return lookup.findStatic(ComparisonManagerImpl::class.java, "getLineContents", methodType)
     }
 
-
     private fun createCreateInnerFragmentsHandle(): MethodHandle {
         val lookup = MethodHandles.privateLookupIn(ComparisonManagerImpl::class.java, MethodHandles.lookup())
         val methodType = MethodType.methodType(
