@@ -8,6 +8,8 @@ import java.util.Properties
 fun properties(key: String) = project.findProperty(key).toString()
 
 val githubProperties = Properties().apply { load(rootProject.file("github.properties").inputStream()) }
+fun String.nullIfBlank() = if (isNotBlank()) this else null
+fun githubProperty(key: String) = githubProperties.getProperty(key)?.nullIfBlank() ?: System.getenv(key)
 
 plugins {
     // Java support
@@ -34,8 +36,8 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/saloed/custom-diff")
         credentials {
-            username = githubProperties.getProperty("gpr.user")
-            password = githubProperties.getProperty("gpr.key")
+            username = githubProperty("gpr.user")
+            password = githubProperty("gpr.key")
         }
     }
 }
