@@ -41,7 +41,7 @@ repositories {
     }
 }
 dependencies {
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.15.0")
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.18.1")
     implementation("com.github.saloed:custom-diff:0.0.6")
 }
 
