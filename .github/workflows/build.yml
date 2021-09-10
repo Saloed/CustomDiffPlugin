@@ -21,6 +21,10 @@ on:
   # Trigger the workflow on any pull request
   pull_request:
 
+env:
+  gpr_user: ${{ github.actor }}
+  gpr_key: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
 
   # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
@@ -80,9 +84,6 @@ jobs:
 
       # Run tests
       - name: Run Tests
-        env:
-          gpr_user: ${{ github.actor }}
-          gpr_key: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew test
 
       # Run verifyPlugin Gradle task
