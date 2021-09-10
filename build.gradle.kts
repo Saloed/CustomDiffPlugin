@@ -37,6 +37,7 @@ repositories {
 }
 dependencies {
     implementation("com.github.saloed:custom-diff:0.0.6")
+    implementation("name.fraser.neil.plaintext:diff_match_patch:master")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin

@@ -15,5 +15,9 @@
                 text="View Custom Diff" description="Show diff in custom format">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
+        <action id="com.github.saloed.z3.trace.Z3TraceDiffAction" class="com.github.saloed.z3.trace.Z3TraceDiffAction"
+                text="Z3 Traces Diff" description="Show diff for z3 traces">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
     </actions>
 </idea-plugin>
