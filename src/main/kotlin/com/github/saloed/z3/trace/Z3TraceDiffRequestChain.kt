@@ -5,8 +5,12 @@ import com.github.saloed.CustomDiffTool
 import com.github.saloed.diff.*
 import com.intellij.diff.chains.DiffRequestChainBase
 import com.intellij.diff.chains.DiffRequestProducer
+import com.intellij.diff.comparison.ByLine
+import com.intellij.diff.comparison.ComparisonPolicy
+import com.intellij.diff.comparison.iterables.FairDiffIterable
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.util.DiffUserDataKeysEx
+import com.intellij.diff.util.Range
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.util.UserDataHolder
 import com.intellij.openapi.vfs.VirtualFile
@@ -25,16 +29,18 @@ class Z3TraceDiffRequestChain(val left: VirtualFile, val right: VirtualFile) : D
             override fun process(context: UserDataHolder, indicator: ProgressIndicator): DiffRequest {
                 left.refresh(false, false)
                 right.refresh(false, false)
-                val diff = buildDiff(left, right)
+                val diff = buildDiff(left, right, indicator)
                 return CustomDiffRequest(diff)
             }
         })
     }
 
     companion object {
+        private const val useIdeaLineDiff = true
+
         private fun VirtualFile.readLines() = inputStream.bufferedReader(charset).readLines()
 
-        private fun buildDiff(left: VirtualFile, right: VirtualFile): TwoWayDiff {
+        private fun buildDiff(left: VirtualFile, right: VirtualFile, indicator: ProgressIndicator): TwoWayDiff {
 
             val lhsSections = makeSections(left.readLines().let { collapseCallAnalyzer(it) })
             val rhsSections = makeSections(right.readLines().let { collapseCallAnalyzer(it) })
@@ -52,16 +58,11 @@ class Z3TraceDiffRequestChain(val left: VirtualFile, val right: VirtualFile) : D
                 val rightDiff = Diff(DiffType.INSERT, emptyRangeAfterLeft, rightRange)
                 return TwoWayDiff(leftFile, rightFile, listOf(leftDiff, rightDiff), DiffMode.LINE)
             }
-
-            val leftHeaders = lhsSections.joinToString("\n") { it.header }
-            val rightHeaders = rhsSections.joinToString("\n") { it.header }
-            val linesDiff = DiffMatchPatch().diffLineLevel(leftHeaders, rightHeaders)
-            val headerDiff = makeHeaderDiff(linesDiff)
-
+            val headerDiff = makeHeaderDiff(lhsSections, rhsSections, indicator)
             val sectionGroups = groupSections(headerDiff, lhsSections, rhsSections)
             check(sectionGroups.filter { it.left != null }.count() == lhsSections.size) { "Left groups mismatch" }
             check(sectionGroups.filter { it.right != null }.count() == rhsSections.size) { "Right groups mismatch" }
-            val diffs = sectionGroups.flatMap { it.asDiff() }
+            val diffs = sectionGroups.flatMap { it.asDiff(indicator) }
             return twoWayDiffFromDMPDiff(diffs, left.name, right.name, DiffMode.LINE)
         }
 
@@ -74,16 +75,48 @@ class Z3TraceDiffRequestChain(val left: VirtualFile, val right: VirtualFile) : D
         }
 
         private data class SectionGroup(val left: FileSection?, val right: FileSection?) {
-            fun asDiff(): List<Diff> = when {
-                left != null && right != null -> contentDiff(left, right)
+            fun asDiff(indicator: ProgressIndicator): List<Diff> = when {
+                left != null && right != null -> contentDiff(left, right, indicator)
                 left == null && right != null -> right.toDiff(Operation.INSERT)
                 left != null && right == null -> left.toDiff(Operation.DELETE)
                 else -> emptyList()
             }
         }
 
-        private fun contentDiff(left: FileSection, right: FileSection) =
+        private fun contentDiff(left: FileSection, right: FileSection, indicator: ProgressIndicator) =
+            when (useIdeaLineDiff) {
+                true -> contentDiffIdea(left, right, indicator)
+                false -> contentDiffDMP(left, right)
+            }
+
+        private fun contentDiffDMP(left: FileSection, right: FileSection) =
             DiffMatchPatch().diffLineLevel(left.contentString(), right.contentString())
+
+        private fun contentDiffIdea(left: FileSection, right: FileSection, indicator: ProgressIndicator): List<Diff> {
+            val leftLines = left.content
+            val rightLines = right.content
+            val ideaDiff = ByLine.compare(
+                leftLines, rightLines,
+                ComparisonPolicy.DEFAULT, indicator
+            )
+            val result = mutableListOf<Diff>()
+            for (diffItem in ideaDiff.diff()) {
+                val leftDiffLines = (diffItem.r.start1 until diffItem.r.end1).map { leftLines[it] }
+                val rightDiffLines = (diffItem.r.start2 until diffItem.r.end2).map { rightLines[it] }
+                if (diffItem.isEqual) {
+                    check(leftDiffLines.size == rightDiffLines.size)
+                    result += Diff(Operation.EQUAL, leftDiffLines.joinToString(separator = "") { "$it\n" })
+                    continue
+                }
+                if (leftDiffLines.isNotEmpty()) {
+                    result += Diff(Operation.DELETE, leftDiffLines.joinToString(separator = "") { "$it\n" })
+                }
+                if (rightDiffLines.isNotEmpty()) {
+                    result += Diff(Operation.INSERT, rightDiffLines.joinToString(separator = "") { "$it\n" })
+                }
+            }
+            return result
+        }
 
         private val headerLineRegex = Regex("^-------- \\[.+\\] .* ---------$")
 
@@ -104,6 +137,62 @@ class Z3TraceDiffRequestChain(val left: VirtualFile, val right: VirtualFile) : D
                 }
             }
             return result
+        }
+
+        private fun makeHeaderDiff(
+            lhsSections: List<FileSection>,
+            rhsSections: List<FileSection>,
+            indicator: ProgressIndicator
+        ) = when (useIdeaLineDiff) {
+            true -> {
+                val leftHeadersList = lhsSections.map { it.header }
+                val rightHeadersList = rhsSections.map { it.header }
+                val ideaDiff = ByLine.compare(
+                    leftHeadersList, rightHeadersList,
+                    ComparisonPolicy.DEFAULT, indicator
+                )
+                makeHeaderDiff(ideaDiff, leftHeadersList, rightHeadersList)
+            }
+            false -> {
+                val leftHeaders = lhsSections.joinToString("\n") { it.header }
+                val rightHeaders = rhsSections.joinToString("\n") { it.header }
+                val linesDiff = DiffMatchPatch().diffLineLevel(leftHeaders, rightHeaders)
+                makeHeaderDiff(linesDiff)
+            }
+        }
+
+        private data class WrappedRange(val r: Range, val isEqual: Boolean)
+
+        private fun makeHeaderDiff(
+            diff: FairDiffIterable,
+            leftHeaders: List<String>,
+            rightHeaders: List<String>
+        ): List<HeaderDiff> {
+            val result = mutableListOf<HeaderDiff>()
+            for (diffItem in diff.diff()) {
+                val leftDiffHeaders = (diffItem.r.start1 until diffItem.r.end1).map { leftHeaders[it] }
+                val rightDiffHeaders = (diffItem.r.start2 until diffItem.r.end2).map { rightHeaders[it] }
+                if (diffItem.isEqual) {
+                    check(leftDiffHeaders.size == rightDiffHeaders.size)
+                    result += leftDiffHeaders.zip(rightDiffHeaders) { l, r -> HeaderDiff(l, r) }
+                    continue
+                }
+                result += leftDiffHeaders.map { HeaderDiff(it, null) }
+                result += rightDiffHeaders.map { HeaderDiff(null, it) }
+            }
+            return result
+        }
+
+        private fun FairDiffIterable.diff(): List<WrappedRange> {
+            val equalChunks = iterateUnchanged().map { WrappedRange(it, true) }
+            val differentChunks = iterateChanges().map { WrappedRange(it, false) }
+            val merged = (equalChunks + differentChunks).sortedWith(compareBy({ it.r.start1 }, { it.r.start2 }))
+            check(
+                merged.zipWithNext().all { (a, b) ->
+                    a.isEqual != b.isEqual && a.r.end1 == b.r.start1 && a.r.end2 == b.r.start2
+                }
+            ) { "Error in merge" }
+            return merged
         }
 
         private fun groupSections(
